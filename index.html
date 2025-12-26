@@ -30,6 +30,13 @@
           }
         }
       }
+      
+      // Polyfill process.env.API_KEY for browser environments
+      window.process = {
+        env: {
+          API_KEY: 'AIzaSyCEG2NQK_PLxs-wB5gwcp95A7DkAGWyb9E'
+        }
+      };
     </script>
   <script type="importmap">
 {

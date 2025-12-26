@@ -2,11 +2,15 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { SearchInputAnalysis, Disease, FinalResponse } from '../types';
 
 const getAiClient = () => {
-  if (!process.env.API_KEY) {
+  // Safe access for browser environments where 'process' might not be defined in global scope by the bundler
+  // @ts-ignore
+  const apiKey = (typeof process !== 'undefined' && process.env?.API_KEY) || (typeof window !== 'undefined' && window.process?.env?.API_KEY);
+
+  if (!apiKey) {
     console.warn("Gemini API Key missing");
-    throw new Error("API Key configuration error");
+    throw new Error("API Key configuration error: API_KEY not found in process.env or window.process.env");
   }
-  return new GoogleGenAI({ apiKey: process.env.API_KEY });
+  return new GoogleGenAI({ apiKey: apiKey });
 };
 
 export const analyzeInput = async (userInput: string): Promise<SearchInputAnalysis> => {
@@ -48,6 +52,7 @@ export const analyzeInput = async (userInput: string): Promise<SearchInputAnalys
     return JSON.parse(text) as SearchInputAnalysis;
   } catch (error: any) {
     console.error("Error analyzing input:", error.message || error);
+    // Fallback if AI fails (e.g. key issue), try basic parsing
     return {
       symptom: userInput,
       lateralization: 'NONE',
