@@ -1,6 +1,29 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { SearchInputAnalysis, Disease, FinalResponse } from '../types';
 
+// --- ÁREA DE TREINAMENTO DA IA (PERSONA E REGRAS) ---
+// EDITE AQUI para mudar como a IA fala e se comporta.
+const AI_PERSONA = `
+Você é a "Bússola da Cura".
+Identidade: Uma terapeuta sistêmica experiente, com tom materno, acolhedor, profundo e poético.
+Seu objetivo não é dar diagnóstico médico, mas sim revelar a "alma" do sintoma.
+
+DIRETRIZES DE TOM DE VOZ:
+1.  **Humanizado e Profundo:** Use frases como "Querida(o)", "Sinta isso", "O corpo sussurra".
+2.  **Sem "Robês":** Evite listas com "pontos", "tópicos" ou linguagem corporativa. Escreva em parágrafos fluidos.
+3.  **Metafórico:** Use metáforas (ex: "mochilas pesadas", "nós na garganta", "feridas abertas").
+4.  **Direto ao Ponto:** Não faça rodeios. Vá direto na dor emocional descrita no texto base.
+
+REGRAS DE LATERALIDADE (Aplique APENAS se o input do usuário tiver lateralidade definida, ex: "ombro direito"):
+- Lado DIREITO: Relacionado ao PAI (figura paterna, autoridade, trabalho, ação, dinheiro, parceiro/cônjuge para destros).
+- Lado ESQUERDO: Relacionado à MÃE (figura materna, ninho, filhos, afeto, proteção, parceira/cônjuge para canhotos).
+
+REGRA DE OURO (Soberana):
+Você DEVE se basear ESTRITAMENTE no texto fornecido do banco de dados (CONTEÚDO OFICIAL).
+- NÃO invente significados que não estejam no texto.
+- Apenas REESCREVA o texto oficial com o seu "Tom de Voz" acolhedor.
+`;
+
 const getAiClient = () => {
   // Safe access for browser environments where 'process' might not be defined in global scope by the bundler
   // @ts-ignore
@@ -70,35 +93,26 @@ export const generateHealingResponse = async (
     return {
       symptom: analysis.symptom,
       mainContent: "",
-      fullText: `Desculpe, o sintoma "${analysis.symptom}" não consta no nosso guia oficial "Bússola da Cura".\n\nPor favor, verifique a grafia ou tente um termo relacionado.`
+      fullText: `Sinto muito, querida(o)...\n\nO sintoma "${analysis.symptom}" ainda não consta no nosso guia "Bússola da Cura".\n\nPor favor, verifique se digitou corretamente ou tente descrever de outra forma (ex: em vez de "cefaléia", tente "dor de cabeça").`
     };
   }
 
   const ai = getAiClient();
 
-  let systemInstruction = `
-    Você é a "Bússola da Cura".
-    REGRA DE OURO: Você deve se basear ESTRITAMENTE no conteúdo fornecido abaixo. NÃO invente, NÃO adicione teorias externas.
-    
-    O conteúdo fornecido é a Verdade Absoluta para esta resposta.
-    Sua função é apenas reescrever de forma acolhedora, humana e profunda.
-  `;
-
   let prompt = `
-    O usuário pesquisou: "${analysis.symptom}".
+    CONTEXTO:
+    O usuário está buscando o significado emocional para: "${analysis.symptom}".
+    Lateralidade indicada pelo usuário: ${analysis.lateralization} (Se for NONE, ignore regras de pai/mãe, a menos que o texto fale sobre isso).
     
-    CONTEÚDO OFICIAL (Não saia disso):
+    CONTEÚDO OFICIAL (Sua Fonte de Verdade):
     "${dbResult.content}"
     
-    Contexto de Lateralidade do Usuário: ${analysis.lateralization}
-    Regra de Lateralidade do Sistema (só aplique se o banco disser que tem lateralidade):
-    - Lado Direito: Figura Paterna (Pai, Padrasto, Avô, Tio, Irmão, Cônjuge, Trabalho/Ação).
-    - Lado Esquerdo: Figura Materna (Mãe, Madrasta, Avó, Tia, Irmã, Cônjuge, Afeto/Ninho).
-
-    Tarefa:
-    1. Acolha o usuário com um tom profundo.
-    2. Apresente o significado emocional baseado APENAS no texto acima.
-    3. SE o usuário mencionou lateralidade (LEFT/RIGHT) E a doença permite, faça a conexão específica.
+    SUA TAREFA:
+    Reescreva o CONTEÚDO OFICIAL acima utilizando a PERSONA definida nas instruções de sistema.
+    1. Comece acolhendo.
+    2. Explique o significado emocional (baseado APENAS no texto acima).
+    3. Se houver lateralidade (Esquerda/Direita) e fizer sentido com o texto, faça a conexão com Pai/Mãe de forma profunda.
+    4. Termine com uma frase de esperança/reflexão.
   `;
 
   try {
@@ -106,8 +120,8 @@ export const generateHealingResponse = async (
       model: 'gemini-3-flash-preview',
       contents: prompt,
       config: {
-        systemInstruction: systemInstruction,
-        temperature: 0.5 
+        systemInstruction: AI_PERSONA, // AQUI É ONDE O TREINAMENTO É APLICADO
+        temperature: 0.7 
       }
     });
 
