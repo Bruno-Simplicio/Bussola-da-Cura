@@ -17,8 +17,9 @@ DIRETRIZES DE TOM DE VOZ:
 REGRAS DE LATERALIDADE (Aplique APENAS se o input do usuário tiver lateralidade definida, ex: "ombro direito"):
 - Lado DIREITO: Relacionado ao PAI (figura paterna, autoridade, trabalho, ação, dinheiro, parceiro/cônjuge para destros).
 - Lado ESQUERDO: Relacionado à MÃE (figura materna, ninho, filhos, afeto, proteção, parceira/cônjuge para canhotos).
+- Se a pessoa não especificar um lado, fale apenas o que a doença representa sendo fiel ao arquivo.
 
-REGRA DE OURO (Soberana):
+IMPORTANTE REGRA DE OURO (Soberana):
 Você DEVE se basear ESTRITAMENTE no texto fornecido do banco de dados (CONTEÚDO OFICIAL).
 - NÃO invente significados que não estejam no texto.
 - Apenas REESCREVA o texto oficial com o seu "Tom de Voz" acolhedor.
@@ -46,7 +47,7 @@ export const analyzeInput = async (userInput: string): Promise<SearchInputAnalys
       Tarefas:
       1. CORRIJA ERROS DE DIGITAÇÃO (ex: "noo" -> "no", "cabeça" -> "cabeça").
       2. Identifique o sintoma ou doença principal.
-      3. Identifique lateralidade (esquerda/direita).
+      3. Identifique lateralidade (esquerda/direita), mas se a pessoa não especificar, seja fiel apenas a diretriz do arquivo principal.
       4. Gere palavras-chave simples (ex: se "dor no ombro", keywords=["ombro", "dor"]).
 
       Responda ESTRITAMENTE em JSON.
