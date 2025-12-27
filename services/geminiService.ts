@@ -2,30 +2,23 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { SearchInputAnalysis, Disease, FinalResponse } from '../types';
 
 // --- ÁREA DE TREINAMENTO DA IA (PERSONA E REGRAS) ---
-// EDITE AQUI para mudar como a IA fala e se comporta.
 const AI_PERSONA = `
 Você é a "Bússola da Cura".
-Identidade: Um terapeuta experiente, acolhedor, profundo e poético.
-Seu objetivo é revelar a Causa Raiz por trás da doença ou dor.
+Identidade: Uma terapeuta sistêmica experiente, com tom materno, acolhedor, profundo e poético.
+Seu objetivo não é dar diagnóstico médico, mas sim revelar a "alma" do sintoma.
 
 DIRETRIZES DE TOM DE VOZ:
 1.  **Humanizado e Profundo:** Use frases como "Querida(o)", "Sinta isso", "O corpo sussurra".
-2.  **Sem "Robês":** Evite listas com "pontos", "tópicos" ou linguagem corporativa. Escreva em parágrafos fluidos.
+2.  **Sem "Robês":** Evite listas com "pontos" ou linguagem corporativa. Escreva em parágrafos fluidos.
 3.  **Metafórico:** Use metáforas (ex: "mochilas pesadas", "nós na garganta", "feridas abertas").
-4.  **seja completo** dê a resposta completa mas de acordo com o que está no arquivo principal.
 
-REGRAS DE LATERALIDADE (Aplique APENAS se o input do usuário tiver lateralidade definida, ex: "ombro direito"):
-- Lado DIREITO: Relacionado ao PAI (figura paterna, autoridade, trabalho, ação, dinheiro, parceiro/cônjuge para destros).
-- Lado ESQUERDO: Relacionado à MÃE (figura materna, ninho, filhos, afeto, proteção, parceira/cônjuge para canhotos).
-- Se a pessoa não especificar um lado, fale apenas o que a doença representa sendo fiel ao arquivo.
+REGRA DE OURO (SOBERANA):
+Você DEVE usar a explicação COMPLETA fornecida no "CONTEÚDO OFICIAL". Não resuma demais. O usuário quer a explicação profunda que está no livro.
 
-IMPORTANTE REGRA DE OURO (Soberana):
-Você DEVE se basear ESTRITAMENTE no texto fornecido do banco de dados (CONTEÚDO OFICIAL).
-- NÃO invente significados que não estejam no texto.
-- Apenas REESCREVA o texto oficial com o seu "Tom de Voz" acolhedor.
-
-IMPORTANTE: NÃO ERRE NA LATERALIDADE. Se a pessoa não especificar (ex. dor no ombro), não fale de nenhum dos lados (materno ou paterno)
-
+REGRAS ESTRITAS DE LATERALIDADE:
+1. Se o input do usuário for "NONE" (Sem lado definido): **JAMAIS** mencione "lado direito/pai" ou "lado esquerdo/mãe". Foque 100% no conflito central do sintoma.
+2. Se o input for "RIGHT" (Direito): Adicione ao final uma reflexão sobre a figura PATERNA (Pai, Trabalho, Ação, Autoridade).
+3. Se o input for "LEFT" (Esquerdo): Adicione ao final uma reflexão sobre a figura MATERNA (Mãe, Ninho, Afeto, Proteção).
 `;
 
 const getAiClient = () => {
@@ -44,16 +37,13 @@ export const analyzeInput = async (userInput: string): Promise<SearchInputAnalys
   try {
     const ai = getAiClient();
     const prompt = `
-      Você é um especialista em análise semântica e correção ortográfica médica.
-      Analise a frase do usuário: "${userInput}".
+      Analise a frase: "${userInput}".
+      Responda JSON.
       
-      Tarefas:
-      1. CORRIJA ERROS DE DIGITAÇÃO (ex: "noo" -> "no", "cabeça" -> "cabeça").
-      2. Identifique o sintoma ou doença principal.
-      3. Identifique lateralidade (esquerda/direita), mas se a pessoa não especificar, seja fiel apenas a diretriz do arquivo principal.
-      4. Gere palavras-chave simples (ex: se "dor no ombro", keywords=["ombro", "dor"]).
-
-      Responda ESTRITAMENTE em JSON.
+      Regras:
+      - symptom: nome da doença corrigido (ex: "dor de cabeca" -> "Dor de cabeça").
+      - lateralization: "RIGHT" se mencionar "direito/direita", "LEFT" se mencionar "esquerdo/esquerda". SE NÃO MENCIONAR LADO, DEVE SER "NONE".
+      - keywords: lista de palavras chave.
     `;
 
     const response = await ai.models.generateContent({
@@ -64,7 +54,7 @@ export const analyzeInput = async (userInput: string): Promise<SearchInputAnalys
         responseSchema: {
           type: Type.OBJECT,
           properties: {
-            symptom: { type: Type.STRING, description: "O nome corrigido e canônico da doença" },
+            symptom: { type: Type.STRING },
             lateralization: { type: Type.STRING, enum: ["LEFT", "RIGHT", "NONE"] },
             keywords: { type: Type.ARRAY, items: { type: Type.STRING } }
           },
@@ -79,10 +69,14 @@ export const analyzeInput = async (userInput: string): Promise<SearchInputAnalys
     return JSON.parse(text) as SearchInputAnalysis;
   } catch (error: any) {
     console.error("Error analyzing input:", error.message || error);
-    // Fallback if AI fails (e.g. key issue), try basic parsing
+    const lower = userInput.toLowerCase();
+    let lat: 'LEFT' | 'RIGHT' | 'NONE' = 'NONE';
+    if (lower.includes('direito') || lower.includes('direita')) lat = 'RIGHT';
+    if (lower.includes('esquerdo') || lower.includes('esquerda')) lat = 'LEFT';
+    
     return {
       symptom: userInput,
-      lateralization: 'NONE',
+      lateralization: lat,
       keywords: userInput.split(' ')
     };
   }
@@ -92,31 +86,40 @@ export const generateHealingResponse = async (
   analysis: SearchInputAnalysis, 
   dbResult: Disease | null
 ): Promise<FinalResponse> => {
-  // CRITICAL REQUIREMENT: If no result found in DB/PDF, do NOT hallucinate.
   if (!dbResult) {
     return {
       symptom: analysis.symptom,
       mainContent: "",
-      fullText: `Sinto muito, querida(o)...\n\nO sintoma "${analysis.symptom}" ainda não consta no nosso guia "Bússola da Cura".\n\nPor favor, verifique se digitou corretamente ou tente descrever de outra forma (ex: em vez de "cefaléia", tente "dor de cabeça").`
+      fullText: `Sinto muito, querida(o)...\n\nO sintoma "${analysis.symptom}" ainda não consta no nosso guia "Bússola da Cura".\n\nPor favor, verifique se digitou corretamente ou tente descrever de outra forma.`
     };
   }
 
   const ai = getAiClient();
 
+  let lateralizationInstruction = "";
+  if (analysis.lateralization === 'RIGHT') {
+    lateralizationInstruction = "O usuário especificou LADO DIREITO. Você DEVE incluir uma análise sobre a relação com o PAI/TRABALHO ao final.";
+  } else if (analysis.lateralization === 'LEFT') {
+    lateralizationInstruction = "O usuário especificou LADO ESQUERDO. Você DEVE incluir uma análise sobre a relação com a MÃE/AFETO ao final.";
+  } else {
+    lateralizationInstruction = "O usuário NÃO especificou lado. PROIBIDO mencionar pai, mãe ou lateralidade. Atenha-se apenas ao significado central da doença.";
+  }
+
   let prompt = `
-    CONTEXTO:
-    O usuário está buscando o significado emocional para: "${analysis.symptom}".
-    Lateralidade indicada pelo usuário: ${analysis.lateralization} (Se for NONE, ignore regras de pai/mãe, a menos que o texto fale sobre isso).
+    DOENÇA: "${dbResult.name}"
     
-    CONTEÚDO OFICIAL (Sua Fonte de Verdade):
+    CONTEÚDO OFICIAL DO LIVRO (Use isso como base absoluta):
     "${dbResult.content}"
     
+    INSTRUÇÃO DE LATERALIDADE:
+    ${lateralizationInstruction}
+    
     SUA TAREFA:
-    Reescreva o CONTEÚDO OFICIAL acima utilizando a PERSONA definida nas instruções de sistema.
-    1. Comece acolhendo.
-    2. Explique o significado emocional (baseado APENAS no texto acima).
-    3. Se houver lateralidade (Esquerda/Direita) e fizer sentido com o texto, faça a conexão com Pai/Mãe de forma profunda.
-    4. Termine com uma frase de esperança/reflexão.
+    Reescreva o conteúdo oficial com a persona da "Bússola da Cura" (acolhedora, profunda).
+    1. Acolha o usuário.
+    2. Explique o significado emocional usando TODO o contexto do texto oficial.
+    3. Se (e somente se) houver instrução de lateralidade acima, adicione o parágrafo específico.
+    4. Encerre com esperança.
   `;
 
   try {
@@ -124,7 +127,7 @@ export const generateHealingResponse = async (
       model: 'gemini-3-flash-preview',
       contents: prompt,
       config: {
-        systemInstruction: AI_PERSONA, // AQUI É ONDE O TREINAMENTO É APLICADO
+        systemInstruction: AI_PERSONA,
         temperature: 0.7 
       }
     });
