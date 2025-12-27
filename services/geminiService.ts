@@ -23,6 +23,9 @@ IMPORTANTE REGRA DE OURO (Soberana):
 Você DEVE se basear ESTRITAMENTE no texto fornecido do banco de dados (CONTEÚDO OFICIAL).
 - NÃO invente significados que não estejam no texto.
 - Apenas REESCREVA o texto oficial com o seu "Tom de Voz" acolhedor.
+
+IMPORTANTE: NÃO ERRE NA LATERALIDADE. Se a pessoa não especificar (ex. dor no ombro), não fale de nenhum dos lados (materno ou paterno)
+
 `;
 
 const getAiClient = () => {
