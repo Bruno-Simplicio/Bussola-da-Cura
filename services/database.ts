@@ -14,7 +14,7 @@ const mapDisease = (data: any): Disease => ({
 
 export const db = {
   diseases: {
-    search: async (term: string): Promise<Disease | null> => {
+    search: async (term: string, lateralization: 'LEFT' | 'RIGHT' | 'NONE' = 'NONE'): Promise<Disease | null> => {
       // 1. Try Supabase
       try {
         const { data, error } = await supabase
@@ -30,9 +30,9 @@ export const db = {
         console.warn("Supabase unavailable, using local fallback");
       }
 
-      // 2. Fallback to Local Data
-      console.log("Searching local database for:", term);
-      return searchLocalDiseases(term);
+      // 2. Fallback to Local Data with Lateralization Logic
+      console.log(`Searching local database for: "${term}" with lateralization: ${lateralization}`);
+      return searchLocalDiseases(term, lateralization);
     },
 
     getAll: async (): Promise<Disease[]> => {

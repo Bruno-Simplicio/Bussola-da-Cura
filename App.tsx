@@ -28,8 +28,8 @@ export default function App() {
       const analysis = await analyzeInput(input);
       console.log("Analysis:", analysis);
 
-      // 2. Search DB
-      const dbMatch = await db.diseases.search(analysis.symptom);
+      // 2. Search DB (Pass lateralization to avoid matching "right shoulder" when looking for "shoulder")
+      const dbMatch = await db.diseases.search(analysis.symptom, analysis.lateralization);
       
       // 3. Generate Final Response
       const finalResponse = await generateHealingResponse(analysis, dbMatch);
