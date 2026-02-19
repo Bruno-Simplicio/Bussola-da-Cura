@@ -103,10 +103,6 @@ export default function App() {
           </div>
         )}
       </main>
-
-      {/* Sticky CTA (Only visible when result is shown) */}
-      {view === ViewState.RESULT && (
-      )}
     </div>
   );
 }
