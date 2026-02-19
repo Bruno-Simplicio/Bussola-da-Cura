@@ -3,7 +3,6 @@ import { Logo, DEFAULT_CTA } from './constants';
 import { ViewState, FinalResponse, CTAConfig } from './types';
 import { analyzeInput, generateHealingResponse } from './services/geminiService';
 import { db } from './services/database';
-import StickyCTA from './components/StickyCTA';
 import { Search, Loader2 } from 'lucide-react';
 
 export default function App() {
@@ -107,7 +106,6 @@ export default function App() {
 
       {/* Sticky CTA (Only visible when result is shown) */}
       {view === ViewState.RESULT && (
-        <StickyCTA config={ctaConfig} />
       )}
     </div>
   );
